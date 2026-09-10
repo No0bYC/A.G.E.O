@@ -9,14 +9,10 @@ import HostDashboard from "./pages/HostDashboard.jsx";
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="max-w-md mx-auto" style={{ minHeight: "100vh" }}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/voyageur" element={<GuestAuth />} />
-          <Route path="/voyageur/app" element={<GuestApp />} />
-        </Routes>
-      </div>
       <Routes>
+        <Route path="/" element={<div className="max-w-md mx-auto" style={{ minHeight: "100vh" }}><Home /></div>} />
+        <Route path="/voyageur" element={<div className="max-w-md mx-auto" style={{ minHeight: "100vh" }}><GuestAuth /></div>} />
+        <Route path="/voyageur/app" element={<div className="max-w-md mx-auto" style={{ minHeight: "100vh" }}><GuestApp /></div>} />
         <Route path="/hote" element={<HostAuth />} />
         <Route path="/hote/app" element={<HostDashboard />} />
       </Routes>
