@@ -28,9 +28,9 @@ export default function HostDashboard() {
 
   useEffect(() => {
     (async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) { navigate("/hote"); return; }
-      const user = sessionData.session.user;
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) { navigate("/hote"); return; }
+      const user = userData.user;
       let { data: hostRow } = await supabase.from("hosts").select("*").eq("id", user.id).maybeSingle();
 
       // Auto-réparation : un compte peut arriver ici authentifié (e-mail
@@ -79,9 +79,13 @@ export default function HostDashboard() {
     if (!newPropertyName.trim()) { setPropError("Donnez un nom à votre propriété."); return; }
     setPropBusy(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData.session.user.id;
-      const { data, error: insertError } = await supabase.from("properties").insert({ host_id: userId, name: newPropertyName.trim() }).select().single();
+      // getUser() revalide le jeton auprès du serveur plutôt que de faire
+      // confiance à la session en cache localement — important ici car
+      // l'espace voyageur (session anonyme) et l'espace hôte partagent le
+      // même client Supabase / stockage local dans un même navigateur.
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) { navigate("/hote"); return; }
+      const { data, error: insertError } = await supabase.from("properties").insert({ host_id: userData.user.id, name: newPropertyName.trim() }).select().single();
       if (insertError) throw insertError;
       setProperties([data]); setSelectedId(data.id); setNewPropertyName("");
     } catch (err) { console.error(err); setPropError("Une erreur est survenue."); }
