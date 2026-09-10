@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase.js";
 import { C, IconBadge, Field, PrimaryButton, inputCls, inputStyle } from "../components/ui.jsx";
+import HostActivitiesPanel from "../components/HostActivitiesPanel.jsx";
 import { ShieldCheck, LogOut, KeyRound } from "lucide-react";
 
 function todayStr() {
@@ -26,6 +27,7 @@ export default function HostDashboard() {
   const [lastCode, setLastCode] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState("codes");
 
   useEffect(() => {
     (async () => {
@@ -137,6 +139,20 @@ export default function HostDashboard() {
               )}
 
               <h2 className="ageo-display text-xl mb-1" style={{ color: C.ink }}>{selectedProperty?.name}</h2>
+
+              <div className="flex gap-2 mb-5 border-b" style={{ borderColor: C.line }}>
+                <button onClick={() => setTab("codes")} className="text-sm font-bold pb-2 px-1" style={{ color: tab === "codes" ? C.sky : C.ink, opacity: tab === "codes" ? 1 : 0.45, borderBottom: tab === "codes" ? `2px solid ${C.sky}` : "2px solid transparent" }}>
+                  Codes
+                </button>
+                <button onClick={() => setTab("activites")} className="text-sm font-bold pb-2 px-1" style={{ color: tab === "activites" ? C.sky : C.ink, opacity: tab === "activites" ? 1 : 0.45, borderBottom: tab === "activites" ? `2px solid ${C.sky}` : "2px solid transparent" }}>
+                  Bons plans
+                </button>
+              </div>
+
+              {tab === "activites" ? (
+                <HostActivitiesPanel propertyId={selectedId} />
+              ) : (
+              <>
               <p className="text-xs mb-4" style={{ color: C.ink, opacity: 0.6 }}>Générez un code par réservation, à transmettre avant l'arrivée.</p>
 
               <form onSubmit={generate} className="rounded-2xl border p-4 mb-6" style={{ borderColor: C.line, background: C.white }}>
@@ -180,6 +196,8 @@ export default function HostDashboard() {
                   </div>
                 ))}
               </div>
+              </>
+              )}
             </>
           )}
         </div>
