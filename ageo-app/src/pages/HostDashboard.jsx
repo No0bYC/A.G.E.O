@@ -30,11 +30,25 @@ export default function HostDashboard() {
     (async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) { navigate("/hote"); return; }
-      const userId = sessionData.session.user.id;
-      const [{ data: hostRow }, { data: propRows, error: propErr }] = await Promise.all([
-        supabase.from("hosts").select("*").eq("id", userId).single(),
-        supabase.from("properties").select("*").eq("host_id", userId).order("created_at"),
-      ]);
+      const user = sessionData.session.user;
+      let { data: hostRow } = await supabase.from("hosts").select("*").eq("id", user.id).maybeSingle();
+
+      // Auto-réparation : un compte peut arriver ici authentifié (e-mail
+      // confirmé puis connecté) sans jamais être passé par la création de
+      // la ligne "hosts" — c'était le cas quand l'inscription initiale ne
+      // recevait pas de session immédiate (confirmation par e-mail requise)
+      // et sautait cette étape. On la crée ici si elle manque, une seule fois.
+      if (!hostRow) {
+        const fallbackName = (user.email || "Hôte").split("@")[0];
+        const { data: created, error: createHostError } = await supabase
+          .from("hosts")
+          .insert({ id: user.id, name: fallbackName, email: user.email })
+          .select()
+          .single();
+        if (!createHostError) hostRow = created;
+      }
+
+      const { data: propRows, error: propErr } = await supabase.from("properties").select("*").eq("host_id", user.id).order("created_at");
       if (propErr) { setError("Impossible de charger vos propriétés."); setLoading(false); return; }
       setHost(hostRow); setProperties(propRows || []);
       if (propRows && propRows.length > 0) setSelectedId(propRows[0].id);
