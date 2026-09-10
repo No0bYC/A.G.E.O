@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase.js";
 import { C, IconBadge, EmptyState, IsoFloorPlan } from "../components/ui.jsx";
+import ActivityBrowser from "../components/ActivityBrowser.jsx";
 import { Home, Wrench, MapPin, ThumbsUp, Users, MessageCircle, LogOut, Package } from "lucide-react";
 
 const TABS = [
@@ -115,6 +116,8 @@ export default function GuestApp() {
               </>
             )}
           </>
+        ) : tab === "plans" ? (
+          <ActivityBrowser propertyId={property.id} />
         ) : (
           <EmptyState icon={TABS.find((t) => t.key === tab).icon} title="Bientôt disponible" subtitle="Cette section arrive dans la prochaine itération." />
         )}
