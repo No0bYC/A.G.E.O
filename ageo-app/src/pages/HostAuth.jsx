@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase.js";
-import { IconBadge, Field, PrimaryButton, SecondaryButton, inputCls, inputStyle, C } from "../components/ui.jsx";
+import { IconBadge, PrimaryButton, inputCls, C } from "../components/ui.jsx";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
 
 export default function HostAuth() {
@@ -70,9 +70,22 @@ export default function HostAuth() {
     }
   }
 
+  // Champ local plutôt que le composant Field partagé : celui-ci écrit en
+  // C.ink (fait pour un fond clair) et devenait illisible sur le fond bleu
+  // de cet écran. Ici tout est explicitement blanc/jaune, jamais ink.
+  function DarkField({ label, children }) {
+    return (
+      <label className="block mb-3">
+        <span className="block text-xs font-semibold mb-1" style={{ color: C.white, opacity: 0.75 }}>{label}</span>
+        {children}
+      </label>
+    );
+  }
+  const darkInputStyle = { borderColor: "rgba(255,255,255,0.35)", color: C.ink, background: C.white };
+
   return (
-    <div className="flex flex-col items-center justify-center px-6" style={{ minHeight: "100vh", background: C.ink }}>
-      <button onClick={mode === "choice" ? () => navigate("/") : () => backTo("choice")} className="self-start mb-6" style={{ color: C.white, opacity: 0.6 }} aria-label="Retour">
+    <div className="flex flex-col items-center justify-center w-full px-6" style={{ minHeight: "100vh", background: C.sky }}>
+      <button onClick={mode === "choice" ? () => navigate("/") : () => backTo("choice")} className="self-start mb-6" style={{ color: C.white, opacity: 0.8 }} aria-label="Retour">
         <ArrowLeft size={20} />
       </button>
       <IconBadge icon={ShieldCheck} size={60} tone="canary" />
@@ -81,40 +94,42 @@ export default function HostAuth() {
       {mode === "choice" && (
         <div className="w-full mt-8 space-y-3" style={{ maxWidth: 280 }}>
           <PrimaryButton onClick={() => backTo("signup")} full>Créer mon compte hôte</PrimaryButton>
-          <SecondaryButton onClick={() => backTo("login")} full>J'ai déjà un compte</SecondaryButton>
+          <button onClick={() => backTo("login")} className="w-full rounded-full font-bold text-sm py-2.5 px-5 border-2 transition-transform active:scale-95" style={{ borderColor: C.white, color: C.white, background: "transparent" }}>
+            J'ai déjà un compte
+          </button>
         </div>
       )}
 
       {mode === "signup" && (
         <form onSubmit={submitSignup} className="w-full mt-8" style={{ maxWidth: 280 }}>
-          <Field label="Votre nom">
-            <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} style={inputStyle} />
-          </Field>
-          <Field label="Nom de votre propriété">
-            <input value={propertyName} onChange={(e) => setPropertyName(e.target.value)} placeholder="Ex. Villa Lagon Bleu" className={inputCls} style={inputStyle} />
-          </Field>
-          <Field label="E-mail">
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} style={inputStyle} />
-          </Field>
-          <Field label="Mot de passe">
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputCls} style={inputStyle} />
-          </Field>
-          {error && <p className="text-xs mb-3" style={{ color: "#F0A98C" }}>{error}</p>}
-          {info && <p className="text-xs mb-3" style={{ color: C.white, opacity: 0.8 }}>{info}</p>}
+          <DarkField label="Votre nom">
+            <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} style={darkInputStyle} />
+          </DarkField>
+          <DarkField label="Nom de votre propriété">
+            <input value={propertyName} onChange={(e) => setPropertyName(e.target.value)} placeholder="Ex. Villa Lagon Bleu" className={inputCls} style={darkInputStyle} />
+          </DarkField>
+          <DarkField label="E-mail">
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} style={darkInputStyle} />
+          </DarkField>
+          <DarkField label="Mot de passe">
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputCls} style={darkInputStyle} />
+          </DarkField>
+          {error && <p className="text-xs mb-3 font-semibold" style={{ color: C.canary }}>{error}</p>}
+          {info && <p className="text-xs mb-3" style={{ color: C.white, opacity: 0.9 }}>{info}</p>}
           <PrimaryButton type="submit" full disabled={busy}>{busy ? "..." : "Créer mon compte"}</PrimaryButton>
         </form>
       )}
 
       {mode === "login" && (
         <form onSubmit={submitLogin} className="w-full mt-8" style={{ maxWidth: 280 }}>
-          <Field label="E-mail">
-            <input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} className={inputCls} style={inputStyle} />
-          </Field>
-          <Field label="Mot de passe">
-            <input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className={inputCls} style={inputStyle} />
-          </Field>
-          {error && <p className="text-xs mb-3" style={{ color: "#F0A98C" }}>{error}</p>}
-          {info && <p className="text-xs mb-3" style={{ color: C.white, opacity: 0.8 }}>{info}</p>}
+          <DarkField label="E-mail">
+            <input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} className={inputCls} style={darkInputStyle} />
+          </DarkField>
+          <DarkField label="Mot de passe">
+            <input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className={inputCls} style={darkInputStyle} />
+          </DarkField>
+          {error && <p className="text-xs mb-3 font-semibold" style={{ color: C.canary }}>{error}</p>}
+          {info && <p className="text-xs mb-3" style={{ color: C.white, opacity: 0.9 }}>{info}</p>}
           <PrimaryButton type="submit" full disabled={busy}>{busy ? "..." : "Se connecter"}</PrimaryButton>
         </form>
       )}
