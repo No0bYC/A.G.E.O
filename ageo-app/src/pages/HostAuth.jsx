@@ -4,6 +4,23 @@ import { supabase } from "../lib/supabase.js";
 import { IconBadge, PrimaryButton, inputCls, C } from "../components/ui.jsx";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
 
+// Déclaré hors du composant HostAuth : une fonction composant définie à
+// l'intérieur d'un autre composant est recréée à chaque rendu, ce que React
+// traite comme un nouveau type de composant à chaque fois. Résultat concret :
+// le champ <input> qu'elle contient était démonté puis remonté à chaque
+// frappe, faisant perdre le focus après chaque lettre — impossible de taper
+// plus d'un caractère d'affilée. Sortir la déclaration ici lui donne une
+// identité stable entre les rendus et corrige le problème.
+function DarkField({ label, children }) {
+  return (
+    <label className="block mb-3">
+      <span className="block text-xs font-semibold mb-1" style={{ color: C.white, opacity: 0.75 }}>{label}</span>
+      {children}
+    </label>
+  );
+}
+const darkInputStyle = { borderColor: "rgba(255,255,255,0.35)", color: C.ink, background: C.white };
+
 export default function HostAuth() {
   const navigate = useNavigate();
   const [mode, setMode] = useState("choice");
@@ -46,11 +63,6 @@ export default function HostAuth() {
     } catch (err) { console.error(err); setError("E-mail ou mot de passe incorrect."); }
     finally { setBusy(false); }
   }
-
-  function DarkField({ label, children }) {
-    return (<label className="block mb-3"><span className="block text-xs font-semibold mb-1" style={{ color: C.white, opacity: 0.75 }}>{label}</span>{children}</label>);
-  }
-  const darkInputStyle = { borderColor: "rgba(255,255,255,0.35)", color: C.ink, background: C.white };
 
   return (
     <div className="flex flex-col items-center justify-center w-full px-6" style={{ minHeight: "100vh", background: C.sky }}>
