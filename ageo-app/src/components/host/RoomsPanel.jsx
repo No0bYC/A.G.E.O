@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase.js";
 import { signedPhotoUrl, uploadPropertyPhoto } from "../../lib/media.js";
 import { C, IconBadge, Field, PrimaryButton, SecondaryButton, inputCls, inputStyle, SHADOW_MD } from "../ui.jsx";
+import FloorPlanPanel from "./FloorPlanPanel.jsx";
 import {
   Plus, Trash2, X, ImagePlus, Camera, Package, Sofa, BedDouble, Bath, UtensilsCrossed,
   Shirt, Wine, Car, Settings as SettingsIcon, Wrench, Leaf, Sun, Waves, Dumbbell, Tv,
-  Sparkles, Gamepad2, Home as HomeIcon, ChevronDown,
+  Sparkles, Gamepad2, Home as HomeIcon, ChevronDown, MapPin,
 } from "lucide-react";
 
 const ROOM_ICONS = {
@@ -169,6 +170,7 @@ export default function RoomsPanel({ propertyId }) {
   const [showForm, setShowForm] = useState(false);
   const [editingRoom, setEditingRoom] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [showFloorPlan, setShowFloorPlan] = useState(false);
 
   async function reload() {
     const { data } = await supabase.from("rooms").select("*").eq("property_id", propertyId).order("created_at");
@@ -185,9 +187,12 @@ export default function RoomsPanel({ propertyId }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
         <h2 className="ageo-display text-xl" style={{ color: C.ink }}>Pièces</h2>
-        <PrimaryButton onClick={() => { setEditingRoom(null); setShowForm(true); }}>+ Ajouter une pièce</PrimaryButton>
+        <div className="flex gap-2">
+          <SecondaryButton onClick={() => setShowFloorPlan(true)}>Ajouter un plan</SecondaryButton>
+          <PrimaryButton onClick={() => { setEditingRoom(null); setShowForm(true); }}>+ Ajouter une pièce</PrimaryButton>
+        </div>
       </div>
       <p className="text-xs mb-5" style={{ color: C.ink, opacity: 0.6 }}>{rooms.length} pièce{rooms.length !== 1 ? "s" : ""} — photo, logo et inventaire pour chacune.</p>
 
@@ -206,6 +211,7 @@ export default function RoomsPanel({ propertyId }) {
       )}
 
       {showForm && <RoomFormModal propertyId={propertyId} room={editingRoom} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); reload(); }} />}
+      {showFloorPlan && <FloorPlanPanel propertyId={propertyId} onClose={() => setShowFloorPlan(false)} onRoomsChanged={reload} />}
     </div>
   );
 }
