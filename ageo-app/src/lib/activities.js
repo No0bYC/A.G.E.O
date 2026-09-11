@@ -12,23 +12,22 @@ export const ACTIVITY_TYPES = [
   { key: "golf", label: "Golf", icon: Flag },
 ];
 export const REGIONS = ["Nord", "Sud", "Est", "Ouest", "Centre"];
-
-export function typeInfo(key) {
-  return ACTIVITY_TYPES.find((t) => t.key === key) || ACTIVITY_TYPES[0];
-}
-
-// Les activités (catalogue et personnalisées) stockent un chemin Storage
-// privé (photo_path), jamais une URL publique — même convention que le
-// reste de l'app. On résout en URL signée à l'affichage.
+export function typeInfo(key) { return ACTIVITY_TYPES.find((t) => t.key === key) || ACTIVITY_TYPES[0]; }
 export async function signedActivityPhotoUrl(path) {
   if (!path) return null;
   const { data, error } = await supabase.storage.from("property-photos").createSignedUrl(path, 3600);
   if (error) { console.error(error); return null; }
   return data.signedUrl;
 }
-
+function sanitizeFilename(name) {
+  const cleaned = name
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "_")
+    .replace(/_+/g, "_");
+  return cleaned || "photo";
+}
 export async function uploadActivityPhoto(propertyId, file) {
-  const path = `${propertyId}/activities/${Date.now()}_${file.name}`;
+  const path = `${propertyId}/activities/${Date.now()}_${sanitizeFilename(file.name)}`;
   const { error } = await supabase.storage.from("property-photos").upload(path, file, { upsert: false });
   if (error) throw error;
   return path;
