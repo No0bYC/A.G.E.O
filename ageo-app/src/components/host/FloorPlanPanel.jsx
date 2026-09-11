@@ -33,6 +33,7 @@ export default function FloorPlanPanel({ propertyId, onClose, onRoomsChanged }) 
   const [pendingName, setPendingName] = useState("");
   const [pendingIcon, setPendingIcon] = useState("Sofa");
   const [selectedRoomId, setSelectedRoomId] = useState(null);
+  const [savedFlash, setSavedFlash] = useState(false);
 
   const containerRef = useRef(null);
   const dragRef = useRef(null);
@@ -121,7 +122,10 @@ export default function FloorPlanPanel({ propertyId, onClose, onRoomsChanged }) 
     if (!pendingName.trim() || !pendingRect) return;
     const plan_rect = { x: pendingRect.x * GRID_SCALE, y: pendingRect.y * GRID_SCALE, w: pendingRect.w * GRID_SCALE, h: pendingRect.h * GRID_SCALE };
     const { error } = await supabase.from("rooms").insert({ property_id: propertyId, floor_id: activeFloorId, name: pendingName.trim(), icon: pendingIcon, trace_rect: pendingRect, plan_rect });
-    if (!error) { setPendingRect(null); reloadRooms(); onRoomsChanged && onRoomsChanged(); }
+    if (!error) {
+      setPendingRect(null); reloadRooms(); onRoomsChanged && onRoomsChanged();
+      setSavedFlash(true); setTimeout(() => setSavedFlash(false), 2000);
+    }
   }
 
   async function deleteSelectedRoom() {
@@ -230,7 +234,10 @@ export default function FloorPlanPanel({ propertyId, onClose, onRoomsChanged }) 
                 </div>
               )}
 
-              <p className="text-xs font-bold uppercase tracking-wide mt-5 mb-2" style={{ color: C.sky }}>Pièces tracées sur {activeFloor.label} ({floorRooms.length})</p>
+              <p className="text-xs font-bold uppercase tracking-wide mt-5 mb-2 flex items-center gap-2" style={{ color: C.sky }}>
+                Pièces tracées sur {activeFloor.label} ({floorRooms.length})
+                {savedFlash && <span className="text-xs font-bold normal-case" style={{ color: C.sage }}>· Pièce enregistrée ✓</span>}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {floorRooms.length === 0 && <p className="text-xs" style={{ color: C.ink, opacity: 0.5 }}>Aucune pièce tracée pour l'instant.</p>}
                 {floorRooms.map((r) => {
@@ -246,6 +253,14 @@ export default function FloorPlanPanel({ propertyId, onClose, onRoomsChanged }) 
           )}
         </div>
       </div>
+
+      {!loading && floors.length > 0 && (
+        <div className="px-5 py-4" style={{ boxShadow: "0 -1px 0 rgba(16,24,32,0.06)" }}>
+          <div className="max-w-2xl mx-auto">
+            <PrimaryButton onClick={onClose} full>Terminé — retour aux pièces</PrimaryButton>
+          </div>
+        </div>
+      )}
 
       {pendingRect && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(28,31,38,0.5)" }} onClick={() => setPendingRect(null)}>
