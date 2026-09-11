@@ -10,7 +10,7 @@ import ReviewsPanel from "../components/host/ReviewsPanel.jsx";
 import SettingsPanel from "../components/host/SettingsPanel.jsx";
 import {
   ShieldCheck, LogOut, KeyRound, Home, Wrench, MapPin, Star, Settings as SettingsIcon,
-  LayoutDashboard,
+  LayoutDashboard, Copy, Pencil, Ban, Check, X,
 } from "lucide-react";
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
@@ -26,6 +26,77 @@ const TABS = [
   { key: "settings", label: "Réglages", icon: SettingsIcon },
 ];
 
+function CodeRow({ c, onChanged }) {
+  const [editing, setEditing] = useState(false);
+  const [label, setLabel] = useState(c.label || "");
+  const [checkIn, setCheckIn] = useState(c.check_in);
+  const [checkOut, setCheckOut] = useState(c.check_out);
+  const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  function copyCode() {
+    if (!c.code_plain) return;
+    navigator.clipboard.writeText(c.code_plain);
+    setCopied(true); setTimeout(() => setCopied(false), 1500);
+  }
+  async function saveEdit(e) {
+    e.preventDefault(); setBusy(true);
+    const { error } = await supabase.from("access_codes").update({ label: label.trim() || null, check_in: checkIn, check_out: checkOut }).eq("id", c.id);
+    setBusy(false);
+    if (!error) { setEditing(false); onChanged(); }
+  }
+  async function revoke() {
+    await supabase.from("access_codes").update({ status: "revoked" }).eq("id", c.id);
+    onChanged();
+  }
+
+  const statusLabel = c.status === "used" ? "Actif" : c.status === "revoked" ? "Révoqué" : "En attente";
+  const statusColor = c.status === "used" ? C.sage : c.status === "revoked" ? C.danger : C.canaryDeep;
+  const statusBg = c.status === "used" ? "#3FA37722" : c.status === "revoked" ? "#C24A2E22" : C.canaryWash;
+
+  if (editing) {
+    return (
+      <form onSubmit={saveEdit} className="rounded-2xl border p-3" style={{ borderColor: C.sky, background: C.white }}>
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <input type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} className={inputCls} style={inputStyle} />
+          <input type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} className={inputCls} style={inputStyle} />
+        </div>
+        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Note" className={inputCls} style={{ ...inputStyle, marginBottom: 8 }} />
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setEditing(false)} className="rounded-full font-bold text-xs px-4 py-2 border" style={{ borderColor: C.line, color: C.ink }}>Annuler</button>
+          <PrimaryButton type="submit" full disabled={busy}>{busy ? "..." : "Enregistrer"}</PrimaryButton>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border p-3" style={{ borderColor: C.line, background: C.white }}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3">
+          <IconBadge icon={KeyRound} size={32} />
+          <div>{c.label && <p className="text-sm font-bold" style={{ color: C.ink }}>{c.label}</p>}<p className="text-xs" style={{ color: C.ink, opacity: 0.5 }}>{c.check_in} → {c.check_out}</p></div>
+        </div>
+        <span className="text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap" style={{ background: statusBg, color: statusColor }}>{statusLabel}</span>
+      </div>
+      <div className="flex items-center justify-between pt-2" style={{ borderTop: `1px solid ${C.line}` }}>
+        {c.code_plain ? (
+          <button onClick={copyCode} className="flex items-center gap-2">
+            <span className="ageo-display text-lg tracking-widest" style={{ color: C.sky }}>{c.code_plain}</span>
+            {copied ? <Check size={14} color={C.sage} /> : <Copy size={13} color={C.sky} style={{ opacity: 0.6 }} />}
+          </button>
+        ) : (
+          <span className="text-xs" style={{ color: C.ink, opacity: 0.4 }}>Code généré avant cette mise à jour — non disponible</span>
+        )}
+        <div className="flex gap-3">
+          <button onClick={() => setEditing(true)} aria-label="Modifier"><Pencil size={14} color={C.ink} style={{ opacity: 0.5 }} /></button>
+          {c.status !== "revoked" && <button onClick={revoke} aria-label="Révoquer"><Ban size={14} color={C.danger} /></button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CodesTab({ propertyId }) {
   const [codes, setCodes] = useState([]);
   const [label, setLabel] = useState("");
@@ -35,9 +106,10 @@ function CodesTab({ propertyId }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    supabase.from("access_codes").select("id, label, check_in, check_out, status, created_at").eq("property_id", propertyId).order("created_at", { ascending: false }).then(({ data }) => setCodes(data || []));
-  }, [propertyId, lastCode]);
+  function reload() {
+    supabase.from("access_codes").select("id, label, check_in, check_out, status, code_plain, created_at").eq("property_id", propertyId).order("created_at", { ascending: false }).then(({ data }) => setCodes(data || []));
+  }
+  useEffect(reload, [propertyId, lastCode]);
 
   async function generate(e) {
     e.preventDefault(); setError("");
@@ -69,12 +141,7 @@ function CodesTab({ propertyId }) {
       <h3 className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: C.sky }}>Codes générés</h3>
       <div className="space-y-2">
         {codes.length === 0 && <p className="text-xs" style={{ color: C.ink, opacity: 0.5 }}>Aucun code pour le moment.</p>}
-        {codes.map((c) => (
-          <div key={c.id} className="rounded-2xl border p-3 flex items-center justify-between" style={{ borderColor: C.line, background: C.white }}>
-            <div className="flex items-center gap-3"><IconBadge icon={KeyRound} size={32} /><div>{c.label && <p className="text-sm font-bold" style={{ color: C.ink }}>{c.label}</p>}<p className="text-xs" style={{ color: C.ink, opacity: 0.5 }}>{c.check_in} → {c.check_out}</p></div></div>
-            <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: c.status === "used" ? "#3FA37722" : C.canaryWash, color: c.status === "used" ? "#3FA377" : C.canaryDeep }}>{c.status === "used" ? "Actif" : c.status === "revoked" ? "Révoqué" : "En attente"}</span>
-          </div>
-        ))}
+        {codes.map((c) => (<CodeRow key={c.id} c={c} onChanged={reload} />))}
       </div>
     </div>
   );
