@@ -30,6 +30,14 @@ export default defineConfig({
         // depuis le cache — seul le shell de l'app (HTML/JS/CSS/icônes)
         // en bénéficie, pour un chargement instantané une fois installée.
         navigateFallbackDenylist: [/^\/api\//],
+        // Sans ça, un nouveau déploiement n'est appliqué qu'au SECOND
+        // rechargement (le service worker attend que tous les onglets de
+        // l'ancienne version soient fermés avant de prendre la main) —
+        // ce qui donne exactement l'impression que "les mises à jour ne
+        // se reflètent pas". skipWaiting + clientsClaim l'applique dès le
+        // premier rechargement après un déploiement.
+        skipWaiting: true,
+        clientsClaim: true,
       },
     }),
   ],
