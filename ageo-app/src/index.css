@@ -2,42 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --ageo-sky: #1490c7;
-  --ageo-sky-wash: #eaf6fc;
-  --ageo-canary: #ffcb3d;
-  --ageo-canary-deep: #c98f00;
-  --ageo-canary-wash: #fff6da;
-  --ageo-ink: #1c1f26;
-  --ageo-neutral: #f7f7f5;
-  --ageo-line: #e4e2d8;
-  --ageo-sage: #3fa377;
-  --ageo-danger: #c24a2e;
+/* Empêche tout élément (image, texte long, tracé SVG...) de forcer la page
+   entière à s'élargir au-delà de l'écran — c'est ce qui oblige à dézoomer
+   sur mobile pour tout voir. Plutôt que de traquer un unique coupable,
+   cette double barrière est la pratique standard : le débordement, s'il y
+   en a un, est absorbé/coupé localement au lieu de pousser tout le layout. */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
 }
-
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
 body {
   margin: 0;
   font-family: "DM Sans", system-ui, sans-serif;
-  background: var(--ageo-neutral);
-  color: var(--ageo-ink);
+  background: #F7F7F5;
+  color: #1C1F26;
+  overflow-wrap: break-word;
+}
+img, svg {
+  max-width: 100%;
+  height: auto;
 }
 
-.ageo-display {
-  font-family: "DM Sans", system-ui, sans-serif;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-
-.ageo-card {
-  background: #ffffff;
-  box-shadow:
-    0 1px 2px rgba(16, 24, 32, 0.06),
-    0 1px 10px rgba(16, 24, 32, 0.05);
-}
-
-.ageo-scroll::-webkit-scrollbar {
-  display: none;
-}
-.ageo-scroll {
-  scrollbar-width: none;
-}
+.ageo-display { font-family: "DM Sans", system-ui, sans-serif; font-weight: 800; letter-spacing: -0.01em; }
+.ageo-card { background: #ffffff; box-shadow: 0 1px 2px rgba(16,24,32,0.06), 0 1px 10px rgba(16,24,32,0.05); }
+.ageo-scroll::-webkit-scrollbar { display: none; }
+.ageo-scroll { scrollbar-width: none; }
