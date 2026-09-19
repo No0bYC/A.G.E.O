@@ -12,7 +12,20 @@ export const ACTIVITY_TYPES = [
   { key: "golf", label: "Golf", icon: Flag },
 ];
 export const REGIONS = ["Nord", "Sud", "Est", "Ouest", "Centre"];
+export const ACCESS_LEVELS = [
+  { key: "tout_public", label: "Tout public" },
+  { key: "adultes", label: "Adultes seulement" },
+  { key: "enfants", label: "Idéal enfants" },
+];
 export function typeInfo(key) { return ACTIVITY_TYPES.find((t) => t.key === key) || ACTIVITY_TYPES[0]; }
+export function accessInfo(key) { return ACCESS_LEVELS.find((a) => a.key === key) || ACCESS_LEVELS[0]; }
+// Photo d'une activité : priorité à photo_external_url (catalogue, trouvée
+// sur le web), sinon photo_path (Storage, upload hôte) résolu en URL signée.
+export async function activityPhotoUrl(activity) {
+  if (activity.photo_external_url) return activity.photo_external_url;
+  if (activity.photo_path) return signedActivityPhotoUrl(activity.photo_path);
+  return null;
+}
 export async function signedActivityPhotoUrl(path) {
   if (!path) return null;
   const { data, error } = await supabase.storage.from("property-photos").createSignedUrl(path, 3600);
