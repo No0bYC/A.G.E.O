@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase.js";
-import { ACTIVITY_TYPES, REGIONS, ACCESS_LEVELS, typeInfo, activityPhotoUrl, uploadActivityPhoto } from "../lib/activities.js";
+import { ACTIVITY_TYPES, REGIONS, ACCESS_LEVELS, typeInfo, activityPhotoUrl, uploadActivityPhoto, setActivityPickPhoto, clearActivityPickPhoto } from "../lib/activities.js";
 import { C, IconBadge, Field, PrimaryButton, SecondaryButton, inputCls, inputStyle } from "./ui.jsx";
-import { Trash2, X, Check, Search, ArrowLeft, Waves, ImagePlus, Navigation } from "lucide-react";
+import { Trash2, X, Check, Search, ArrowLeft, Waves, ImagePlus, Navigation, Image as ImageIcon, RotateCcw, Loader2 } from "lucide-react";
 
 function Chip({ active, onClick, children, icon: Icon }) {
   return (
@@ -136,9 +136,41 @@ function ActivityFormModal({ propertyId, onClose, onSaved }) {
     </div>
   );
 }
-function HostActivityRow({ activity, source, onRemove }) {
+function HostActivityRow({ activity, source, propertyId, onUpdated, onRemove }) {
   const info = typeInfo(activity.type); const TIcon = info.icon; const [photoUrl, setPhotoUrl] = useState(null);
-  useEffect(() => { activityPhotoUrl(activity).then(setPhotoUrl); }, [activity.photo_path, activity.photo_external_url]);
+  const fileInputRef = useRef(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  useEffect(() => { activityPhotoUrl(activity).then(setPhotoUrl); }, [activity.photo_path, activity.photo_external_url, activity.override_photo_path]);
+
+  async function handlePhotoChange(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      await setActivityPickPhoto(propertyId, activity.id, file);
+      await onUpdated();
+    } catch (err) {
+      console.error(err);
+      alert("Impossible de mettre à jour la photo pour le moment.");
+    } finally {
+      setPhotoBusy(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handlePhotoReset() {
+    setPhotoBusy(true);
+    try {
+      await clearActivityPickPhoto(propertyId, activity.id);
+      await onUpdated();
+    } catch (err) {
+      console.error(err);
+      alert("Impossible de réinitialiser la photo pour le moment.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
   return (
     <div className="rounded-2xl border p-3 flex items-center gap-3" style={{ borderColor: C.line, background: C.white }}>
       <div className="rounded-xl overflow-hidden shrink-0 flex items-center justify-center" style={{ width: 52, height: 52, background: C.skyWash }}>{photoUrl ? <img src={photoUrl} alt="" className="w-full h-full object-cover" /> : <TIcon size={20} color={C.sky} />}</div>
@@ -149,6 +181,33 @@ function HostActivityRow({ activity, source, onRemove }) {
           <span className="text-xs" style={{ color: C.ink, opacity: 0.45 }}>{info.label}</span>
           <span className="text-xs font-bold" style={{ color: source === "custom" ? C.sage : C.sky, opacity: 0.8 }}>{source === "custom" ? "· Créée par vous" : "· Depuis la liste"}</span>
         </div>
+        {source === "picked" && (
+          <div className="flex items-center gap-2 mt-2">
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+            <button
+              type="button"
+              disabled={photoBusy}
+              onClick={() => fileInputRef.current && fileInputRef.current.click()}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg border"
+              style={{ borderColor: C.line, color: C.ink, opacity: photoBusy ? 0.5 : 0.75 }}
+            >
+              {photoBusy ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
+              {activity.override_photo_path ? "Changer la photo" : "Ajouter une photo"}
+            </button>
+            {activity.override_photo_path && (
+              <button
+                type="button"
+                disabled={photoBusy}
+                onClick={handlePhotoReset}
+                className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg border"
+                style={{ borderColor: C.line, color: C.ink, opacity: photoBusy ? 0.5 : 0.55 }}
+              >
+                <RotateCcw size={12} />
+                Réinitialiser
+              </button>
+            )}
+          </div>
+        )}
       </div>
       <button onClick={onRemove} aria-label="Retirer" className="shrink-0"><Trash2 size={16} color={C.danger} /></button>
     </div>
@@ -156,15 +215,19 @@ function HostActivityRow({ activity, source, onRemove }) {
 }
 export default function HostActivitiesPanel({ propertyId }) {
   const [loading, setLoading] = useState(true);
-  const [catalog, setCatalog] = useState([]); const [pickedIds, setPickedIds] = useState([]); const [customActivities, setCustomActivities] = useState([]);
+  const [catalog, setCatalog] = useState([]); const [pickedIds, setPickedIds] = useState([]); const [pickPhotos, setPickPhotos] = useState({}); const [customActivities, setCustomActivities] = useState([]);
   const [showForm, setShowForm] = useState(false); const [showPicker, setShowPicker] = useState(false);
   async function reload() {
     const [{ data: catalogRows }, { data: picks }, { data: custom }] = await Promise.all([
       supabase.from("activity_catalog").select("*").order("name"),
-      supabase.from("property_activity_picks").select("activity_id").eq("property_id", propertyId),
+      supabase.from("property_activity_picks").select("activity_id, photo_path").eq("property_id", propertyId),
       supabase.from("property_custom_activities").select("*").eq("property_id", propertyId).order("created_at", { ascending: false }),
     ]);
-    setCatalog(catalogRows || []); setPickedIds((picks || []).map((p) => p.activity_id)); setCustomActivities(custom || []); setLoading(false);
+    setCatalog(catalogRows || []);
+    setPickedIds((picks || []).map((p) => p.activity_id));
+    setPickPhotos(Object.fromEntries((picks || []).map((p) => [p.activity_id, p.photo_path])));
+    setCustomActivities(custom || []);
+    setLoading(false);
   }
   useEffect(() => { if (propertyId) reload(); }, [propertyId]);
   async function togglePick(activityId, isPicked) {
@@ -173,7 +236,9 @@ export default function HostActivitiesPanel({ propertyId }) {
   }
   async function removeCustom(id) { await supabase.from("property_custom_activities").delete().eq("id", id); setCustomActivities((prev) => prev.filter((a) => a.id !== id)); }
   if (loading) return <p className="text-sm" style={{ color: C.ink, opacity: 0.5 }}>Chargement...</p>;
-  const pickedActivities = catalog.filter((a) => pickedIds.includes(a.id));
+  const pickedActivities = catalog
+    .filter((a) => pickedIds.includes(a.id))
+    .map((a) => ({ ...a, override_photo_path: pickPhotos[a.id] || null }));
   const combined = [...pickedActivities.map((a) => ({ activity: a, source: "picked" })), ...customActivities.map((a) => ({ activity: a, source: "custom" }))];
   return (
     <div>
@@ -185,7 +250,16 @@ export default function HostActivitiesPanel({ propertyId }) {
       {combined.length === 0 ? (
         <div className="flex flex-col items-center py-10 text-center rounded-3xl" style={{ background: C.skyWash }}><IconBadge icon={Waves} size={48} /><p className="text-sm mt-3 font-bold" style={{ color: C.ink }}>Aucun bon plan pour l'instant</p><p className="text-xs mt-1" style={{ color: C.ink, opacity: 0.6, maxWidth: 240 }}>Piochez jusqu'à 10 activités dans la liste, ou créez les vôtres.</p></div>
       ) : (
-        <div className="space-y-2">{combined.map(({ activity, source }) => (<HostActivityRow key={activity.id} activity={activity} source={source} onRemove={() => (source === "custom" ? removeCustom(activity.id) : togglePick(activity.id, true))} />))}</div>
+        <div className="space-y-2">{combined.map(({ activity, source }) => (
+          <HostActivityRow
+            key={activity.id}
+            activity={activity}
+            source={source}
+            propertyId={propertyId}
+            onUpdated={reload}
+            onRemove={() => (source === "custom" ? removeCustom(activity.id) : togglePick(activity.id, true))}
+          />
+        ))}</div>
       )}
       {showForm && <ActivityFormModal propertyId={propertyId} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); reload(); }} />}
       {showPicker && <ActivityPickerModal catalog={catalog} pickedIds={pickedIds} onToggle={togglePick} onClose={() => setShowPicker(false)} />}
