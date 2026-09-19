@@ -62,6 +62,7 @@ function ActivityPickerModal({ catalog, pickedIds, onToggle, onClose }) {
                   </div>
                   <div className="px-3 py-2.5"><p className="text-sm font-bold leading-snug" style={{ color: C.ink }}>{a.name}</p>
                     <div className="flex items-center gap-1 mt-1.5"><span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: C.canaryWash, color: C.canaryDeep }}>{a.region}</span><span className="text-xs" style={{ color: C.ink, opacity: 0.45 }}>{info.label}</span></div>
+                    {a.description && <p className="text-xs mt-1 line-clamp-2" style={{ color: C.ink, opacity: 0.5, lineHeight: 1.35 }}>{a.description}</p>}
                   </div>
                 </button>
               );
@@ -181,6 +182,9 @@ function HostActivityRow({ activity, source, propertyId, onUpdated, onRemove }) 
           <span className="text-xs" style={{ color: C.ink, opacity: 0.45 }}>{info.label}</span>
           <span className="text-xs font-bold" style={{ color: source === "custom" ? C.sage : C.sky, opacity: 0.8 }}>{source === "custom" ? "· Créée par vous" : "· Depuis la liste"}</span>
         </div>
+        {activity.description && (
+          <p className="text-xs mt-1 line-clamp-2" style={{ color: C.ink, opacity: 0.55, lineHeight: 1.35 }}>{activity.description}</p>
+        )}
         {source === "picked" && (
           <div className="flex items-center gap-2 mt-2">
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />

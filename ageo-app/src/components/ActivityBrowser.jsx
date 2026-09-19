@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import { ACTIVITY_TYPES, REGIONS, typeInfo, accessInfo, activityPhotoUrl } from "../lib/activities.js";
+import { propertyCoords, estimateDistanceLabel } from "../lib/geo.js";
 import { C, IconBadge, EmptyState } from "./ui.jsx";
 import { MapPin, ExternalLink, X, Waves, Clock, Users, CloudSun, Backpack, Navigation } from "lucide-react";
 
@@ -33,6 +34,9 @@ function ActivityCard({ activity, onOpen }) {
           <span className="text-xs font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: C.canaryWash, color: C.canaryDeep }}>{activity.region}</span>
           <span className="text-xs truncate" style={{ color: C.ink, opacity: 0.45 }}>{info.label}</span>
         </div>
+        {activity.description && (
+          <p className="text-xs mt-1.5 line-clamp-2" style={{ color: C.ink, opacity: 0.55, lineHeight: 1.35 }}>{activity.description}</p>
+        )}
       </div>
     </button>
   );
@@ -54,7 +58,7 @@ function InfoRow({ icon: Icon, label, value, muted }) {
 function ActivityDetailSheet({ activity, onClose }) {
   const info = typeInfo(activity.type); const TIcon = info.icon;
   const access = accessInfo(activity.access_level);
-  const hasPracticalInfo = activity.duration || activity.access_level || activity.optimal_weather || activity.equipment;
+  const hasPracticalInfo = activity.duration || activity.access_level || activity.optimal_weather || activity.equipment || activity.distanceLabel;
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end" style={{ background: "rgba(28,31,38,0.4)" }} onClick={onClose}>
       <div className="ageo-sheet rounded-t-3xl" style={{ background: C.white, maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
@@ -82,7 +86,7 @@ function ActivityDetailSheet({ activity, onClose }) {
                 <InfoRow icon={Users} label="Accessibilité" value={activity.access_level && access.label} />
                 <InfoRow icon={CloudSun} label="Météo optimale" value={activity.optimal_weather} />
                 <InfoRow icon={Backpack} label="À prévoir" value={activity.equipment} />
-                <InfoRow icon={Navigation} label="Distance du logement" value="Calculée à l'arrivée" muted />
+                <InfoRow icon={Navigation} label="Distance du logement" value={activity.distanceLabel || "Non disponible pour cette activité"} muted={!activity.distanceLabel} />
               </div>
             </>
           )}
@@ -106,16 +110,22 @@ export default function ActivityBrowser({ propertyId }) {
   useEffect(() => {
     if (!propertyId) return;
     (async () => {
-      const [{ data: picks, error: pickErr }, { data: custom, error: customErr }] = await Promise.all([
+      const [{ data: property }, { data: picks, error: pickErr }, { data: custom, error: customErr }] = await Promise.all([
+        supabase.from("properties").select("weather_location, address, latitude, longitude").eq("id", propertyId).maybeSingle(),
         supabase.from("property_activity_picks").select("photo_path, activity_catalog(*)").eq("property_id", propertyId),
         supabase.from("property_custom_activities").select("*").eq("property_id", propertyId),
       ]);
       if (pickErr) console.error(pickErr);
       if (customErr) console.error(customErr);
+      const homeCoords = propertyCoords(property);
       const fromCatalog = (picks || []).map((p) => ({ ...p.activity_catalog, override_photo_path: p.photo_path, source: "catalog" }));
       const fromCustom = (custom || []).map((a) => ({ ...a, source: "custom" }));
       const merged = [...fromCatalog, ...fromCustom];
-      const withPhotos = await Promise.all(merged.map(async (a) => ({ ...a, photoUrl: await activityPhotoUrl(a) })));
+      const withPhotos = await Promise.all(merged.map(async (a) => ({
+        ...a,
+        photoUrl: await activityPhotoUrl(a),
+        distanceLabel: estimateDistanceLabel(homeCoords, a),
+      })));
       setActivities(withPhotos); setLoading(false);
     })();
   }, [propertyId]);
