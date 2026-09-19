@@ -29,9 +29,9 @@ function ActivityCard({ activity, onOpen }) {
       </div>
       <div className="px-3 py-2.5">
         <p className="text-sm font-bold leading-snug" style={{ color: C.ink }}>{activity.name}</p>
-        <div className="flex items-center gap-1 mt-1.5">
-          <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: C.canaryWash, color: C.canaryDeep }}>{activity.region}</span>
-          <span className="text-xs" style={{ color: C.ink, opacity: 0.45 }}>{info.label}</span>
+        <div className="flex items-center gap-1 mt-1.5 min-w-0">
+          <span className="text-xs font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: C.canaryWash, color: C.canaryDeep }}>{activity.region}</span>
+          <span className="text-xs truncate" style={{ color: C.ink, opacity: 0.45 }}>{info.label}</span>
         </div>
       </div>
     </button>
