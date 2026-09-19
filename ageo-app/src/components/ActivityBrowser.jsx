@@ -107,12 +107,12 @@ export default function ActivityBrowser({ propertyId }) {
     if (!propertyId) return;
     (async () => {
       const [{ data: picks, error: pickErr }, { data: custom, error: customErr }] = await Promise.all([
-        supabase.from("property_activity_picks").select("activity_catalog(*)").eq("property_id", propertyId),
+        supabase.from("property_activity_picks").select("photo_path, activity_catalog(*)").eq("property_id", propertyId),
         supabase.from("property_custom_activities").select("*").eq("property_id", propertyId),
       ]);
       if (pickErr) console.error(pickErr);
       if (customErr) console.error(customErr);
-      const fromCatalog = (picks || []).map((p) => ({ ...p.activity_catalog, source: "catalog" }));
+      const fromCatalog = (picks || []).map((p) => ({ ...p.activity_catalog, override_photo_path: p.photo_path, source: "catalog" }));
       const fromCustom = (custom || []).map((a) => ({ ...a, source: "custom" }));
       const merged = [...fromCatalog, ...fromCustom];
       const withPhotos = await Promise.all(merged.map(async (a) => ({ ...a, photoUrl: await activityPhotoUrl(a) })));
