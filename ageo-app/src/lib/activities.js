@@ -40,7 +40,7 @@ export async function signedActivityPhotoUrl(path) {
 }
 function sanitizeFilename(name) {
   const cleaned = name
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
     .replace(/[^a-zA-Z0-9._-]+/g, "_")
     .replace(/_+/g, "_");
   return cleaned || "photo";
